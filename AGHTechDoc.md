@@ -890,6 +890,7 @@ Response:
 		"edns_cs_enabled": true | false,
 		"dnssec_enabled": true | false
 		"disable_ipv6": true | false,
+		"fastest_addr": true | false, // use Fastest Address algorithm
 	}
 
 
@@ -908,6 +909,7 @@ Request:
 		"edns_cs_enabled": true | false,
 		"dnssec_enabled": true | false
 		"disable_ipv6": true | false,
+		"fastest_addr": true | false, // use Fastest Address algorithm
 	}
 
 Response:
