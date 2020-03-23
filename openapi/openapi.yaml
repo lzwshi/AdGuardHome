@@ -1112,6 +1112,8 @@ definitions:
                 type: "boolean"
             dnssec_enabled:
                 type: "boolean"
+            fastest_addr:
+                type: "boolean"
 
     UpstreamsConfig:
         type: "object"
