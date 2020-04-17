@@ -891,6 +891,7 @@ Response:
 		"dnssec_enabled": true | false
 		"disable_ipv6": true | false,
 		"fastest_addr": true | false, // use Fastest Address algorithm
+		"parallel_requests": true | false, // send DNS requests to all upstream servers at once
 	}
 
 
@@ -910,6 +911,7 @@ Request:
 		"dnssec_enabled": true | false
 		"disable_ipv6": true | false,
 		"fastest_addr": true | false, // use Fastest Address algorithm
+		"parallel_requests": true | false, // send DNS requests to all upstream servers at once
 	}
 
 Response:
