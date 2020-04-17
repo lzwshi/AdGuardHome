@@ -22,6 +22,9 @@ func httpError(r *http.Request, w http.ResponseWriter, code int, format string, 
 }
 
 type dnsConfigJSON struct {
+	Upstreams  []string `json:"upstream_dns"`
+	Bootstraps []string `json:"bootstrap_dns"`
+
 	ProtectionEnabled bool   `json:"protection_enabled"`
 	RateLimit         uint32 `json:"ratelimit"`
 	BlockingMode      string `json:"blocking_mode"`
@@ -31,11 +34,15 @@ type dnsConfigJSON struct {
 	DNSSECEnabled     bool   `json:"dnssec_enabled"`
 	DisableIPv6       bool   `json:"disable_ipv6"`
 	FastestAddr       bool   `json:"fastest_addr"`
+	ParallelRequests  bool   `json:"parallel_requests"`
 }
 
 func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 	resp := dnsConfigJSON{}
 	s.RLock()
+	resp.Upstreams = stringArrayDup(s.conf.UpstreamDNS)
+	resp.Bootstraps = stringArrayDup(s.conf.BootstrapDNS)
+
 	resp.ProtectionEnabled = s.conf.ProtectionEnabled
 	resp.BlockingMode = s.conf.BlockingMode
 	resp.BlockingIPv4 = s.conf.BlockingIPv4
@@ -45,6 +52,7 @@ func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 	resp.DNSSECEnabled = s.conf.EnableDNSSEC
 	resp.DisableIPv6 = s.conf.AAAADisabled
 	resp.FastestAddr = s.conf.FastestAddrAlgo
+	resp.ParallelRequests = s.conf.AllServers
 	s.RUnlock()
 
 	js, err := json.Marshal(resp)
@@ -85,6 +93,25 @@ func (s *Server) handleSetConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if js.Exists("upstream_dns") {
+		if len(req.Upstreams) != 0 {
+			err = ValidateUpstreams(req.Upstreams)
+			if err != nil {
+				httpError(r, w, http.StatusBadRequest, "wrong upstreams specification: %s", err)
+				return
+			}
+		}
+	}
+
+	if js.Exists("bootstrap_dns") {
+		for _, host := range req.Bootstraps {
+			if err := checkPlainDNS(host); err != nil {
+				httpError(r, w, http.StatusBadRequest, "%s can not be used as bootstrap dns cause: %s", host, err)
+				return
+			}
+		}
+	}
+
 	if js.Exists("blocking_mode") && !checkBlockingMode(req) {
 		httpError(r, w, http.StatusBadRequest, "blocking_mode: incorrect value")
 		return
@@ -92,6 +119,16 @@ func (s *Server) handleSetConfig(w http.ResponseWriter, r *http.Request) {
 
 	restart := false
 	s.Lock()
+
+	if js.Exists("upstream_dns") {
+		s.conf.UpstreamDNS = req.Upstreams
+		restart = true
+	}
+
+	if js.Exists("bootstrap_dns") {
+		s.conf.BootstrapDNS = req.Bootstraps
+		restart = true
+	}
 
 	if js.Exists("protection_enabled") {
 		s.conf.ProtectionEnabled = req.ProtectionEnabled
@@ -135,6 +172,10 @@ func (s *Server) handleSetConfig(w http.ResponseWriter, r *http.Request) {
 		s.conf.FastestAddrAlgo = req.FastestAddr
 	}
 
+	if js.Exists("parallel_requests") {
+		s.conf.AllServers = req.ParallelRequests
+	}
+
 	s.Unlock()
 	s.conf.ConfigModified()
 
@@ -150,51 +191,6 @@ func (s *Server) handleSetConfig(w http.ResponseWriter, r *http.Request) {
 type upstreamJSON struct {
 	Upstreams    []string `json:"upstream_dns"`  // Upstreams
 	BootstrapDNS []string `json:"bootstrap_dns"` // Bootstrap DNS
-	AllServers   bool     `json:"all_servers"`   // --all-servers param for dnsproxy
-}
-
-func (s *Server) handleSetUpstreamConfig(w http.ResponseWriter, r *http.Request) {
-	req := upstreamJSON{}
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		httpError(r, w, http.StatusBadRequest, "Failed to parse new upstreams config json: %s", err)
-		return
-	}
-
-	if len(req.Upstreams) != 0 {
-		err = ValidateUpstreams(req.Upstreams)
-		if err != nil {
-			httpError(r, w, http.StatusBadRequest, "wrong upstreams specification: %s", err)
-			return
-		}
-	}
-
-	newconf := FilteringConfig{}
-	newconf.UpstreamDNS = req.Upstreams
-
-	// bootstrap servers are plain DNS only
-	for _, host := range req.BootstrapDNS {
-		if err := checkPlainDNS(host); err != nil {
-			httpError(r, w, http.StatusBadRequest, "%s can not be used as bootstrap dns cause: %s", host, err)
-			return
-		}
-	}
-	newconf.BootstrapDNS = req.BootstrapDNS
-
-	newconf.AllServers = req.AllServers
-
-	s.Lock()
-	s.conf.UpstreamDNS = newconf.UpstreamDNS
-	s.conf.BootstrapDNS = newconf.BootstrapDNS
-	s.conf.AllServers = newconf.AllServers
-	s.Unlock()
-	s.conf.ConfigModified()
-
-	err = s.Reconfigure(nil)
-	if err != nil {
-		httpError(r, w, http.StatusInternalServerError, "%s", err)
-		return
-	}
 }
 
 // ValidateUpstreams validates each upstream and returns an error if any upstream is invalid or if there are no default upstreams specified
@@ -405,7 +401,6 @@ func (s *Server) handleDOH(w http.ResponseWriter, r *http.Request) {
 func (s *Server) registerHandlers() {
 	s.conf.HTTPRegister("GET", "/control/dns_info", s.handleGetConfig)
 	s.conf.HTTPRegister("POST", "/control/dns_config", s.handleSetConfig)
-	s.conf.HTTPRegister("POST", "/control/set_upstreams_config", s.handleSetUpstreamConfig)
 	s.conf.HTTPRegister("POST", "/control/test_upstream_dns", s.handleTestUpstreamDNS)
 
 	s.conf.HTTPRegister("GET", "/control/access/list", s.handleAccessList)
