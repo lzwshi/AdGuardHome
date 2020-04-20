@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "net/http/pprof"
 	"runtime/debug"
 
 	"github.com/AdguardTeam/AdGuardHome/home"
