@@ -28,6 +28,8 @@ import (
 
 	"github.com/AdguardTeam/AdGuardHome/isdelve"
 
+	_ "net/http/pprof"
+
 	"github.com/AdguardTeam/AdGuardHome/dhcpd"
 	"github.com/AdguardTeam/AdGuardHome/dnsfilter"
 	"github.com/AdguardTeam/AdGuardHome/dnsforward"
@@ -241,6 +243,12 @@ func run(args options) {
 		err := config.write()
 		if err != nil {
 			log.Fatal(err)
+		}
+
+		if config.EnablePProf {
+			go func() {
+				log.Println(http.ListenAndServe("localhost:6060", nil))
+			}()
 		}
 	}
 
