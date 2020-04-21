@@ -188,6 +188,7 @@ type ServerConfig struct {
 	TLSAllowUnencryptedDOH bool
 
 	TLSv12Roots *x509.CertPool // list of root CAs for TLSv1.2
+	TLSCiphers  []uint16       // list of TLS ciphers to use
 
 	// Called when the configuration is changed by HTTP request
 	ConfigModified func()
@@ -351,6 +352,7 @@ func (s *Server) Prepare(config *ServerConfig) error {
 		}
 	}
 	upstream.RootCAs = s.conf.TLSv12Roots
+	upstream.CipherSuites = s.conf.TLSCiphers
 
 	if len(proxyConfig.Upstreams) == 0 {
 		log.Fatal("len(proxyConfig.Upstreams) == 0")
@@ -408,7 +410,7 @@ func matchDNSName(dnsNames []string, sni string) bool {
 func (s *Server) onGetCertificate(ch *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	if s.conf.StrictSNICheck && !matchDNSName(s.conf.dnsNames, ch.ServerName) {
 		log.Info("DNS: TLS: unknown SNI in Client Hello: %s", ch.ServerName)
-		return nil, fmt.Errorf("Invalid SNI")
+		return nil, fmt.Errorf("invalid SNI")
 	}
 	return &s.conf.cert, nil
 }
@@ -687,12 +689,12 @@ func processFilteringAfterResponse(ctx *dnsContext) int {
 			d.Res.Answer = answer
 		}
 
-	case dnsfilter.RewriteEtcHosts:
 	case dnsfilter.NotFilteredWhiteList:
 		// nothing
 
 	default:
-		if !ctx.protectionEnabled {
+		if !ctx.protectionEnabled || // filters are disabled: there's nothing to check for
+			!ctx.responseFromUpstream { // only check response if it's from an upstream server
 			break
 		}
 		origResp2 := d.Res
@@ -811,19 +813,16 @@ func (s *Server) updateStats(d *proxy.DNSContext, elapsed time.Duration, res dns
 		e.Client = addr.IP
 	}
 	e.Time = uint32(elapsed / 1000)
-	switch res.Reason {
+	e.Result = stats.RNotFiltered
 
-	case dnsfilter.NotFilteredNotFound:
-		fallthrough
-	case dnsfilter.NotFilteredWhiteList:
-		fallthrough
-	case dnsfilter.NotFilteredError:
-		e.Result = stats.RNotFiltered
+	switch res.Reason {
 
 	case dnsfilter.FilteredSafeBrowsing:
 		e.Result = stats.RSafeBrowsing
+
 	case dnsfilter.FilteredParental:
 		e.Result = stats.RParental
+
 	case dnsfilter.FilteredSafeSearch:
 		e.Result = stats.RSafeSearch
 
@@ -834,6 +833,7 @@ func (s *Server) updateStats(d *proxy.DNSContext, elapsed time.Duration, res dns
 	case dnsfilter.FilteredBlockedService:
 		e.Result = stats.RFiltered
 	}
+
 	s.stats.Update(e)
 }
 
@@ -892,6 +892,20 @@ func (s *Server) filterDNSRequest(ctx *dnsContext) (*dnsfilter.Result, error) {
 		ctx.origQuestion = d.Req.Question[0]
 		// resolve canonical name, not the original host name
 		d.Req.Question[0].Name = dns.Fqdn(res.CanonName)
+
+	} else if res.Reason == dnsfilter.RewriteEtcHosts && len(res.ReverseHost) != 0 {
+
+		resp := s.makeResponse(req)
+		ptr := &dns.PTR{}
+		ptr.Hdr = dns.RR_Header{
+			Name:   req.Question[0].Name,
+			Rrtype: dns.TypePTR,
+			Ttl:    s.conf.BlockedResponseTTL,
+			Class:  dns.ClassINET,
+		}
+		ptr.Ptr = res.ReverseHost
+		resp.Answer = append(resp.Answer, ptr)
+		d.Res = resp
 	}
 
 	return &res, err

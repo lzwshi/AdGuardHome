@@ -37,7 +37,7 @@ func initDNSServer() error {
 	}
 	Context.stats, err = stats.New(statsConf)
 	if err != nil {
-		return fmt.Errorf("Couldn't initialize statistics module")
+		return fmt.Errorf("couldn't initialize statistics module")
 	}
 	conf := querylog.Config{
 		Enabled:           config.DNS.QueryLogEnabled,
@@ -172,6 +172,7 @@ func generateServerConfig() dnsforward.ServerConfig {
 		}
 	}
 	newconfig.TLSv12Roots = Context.tlsRoots
+	newconfig.TLSCiphers = Context.tlsCiphers
 	newconfig.TLSAllowUnencryptedDOH = tlsConf.AllowUnencryptedDOH
 
 	newconfig.FilterHandler = applyAdditionalFiltering

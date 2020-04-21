@@ -306,6 +306,8 @@ func verifyCertChain(data *tlsConfigStatus, certChain string, serverName string)
 		if decoded.Type == "CERTIFICATE" {
 			certs = append(certs, decoded)
 		} else {
+			// ignore "this result of append is never used" warning
+			// nolint
 			skippedBytes = append(skippedBytes, decoded.Type)
 		}
 	}
@@ -372,7 +374,8 @@ func verifyCertChain(data *tlsConfigStatus, certChain string, serverName string)
 
 func validatePkey(data *tlsConfigStatus, pkey string) error {
 	// now do a more extended validation
-	var key *pem.Block // PEM-encoded certificates
+	var key *pem.Block        // PEM-encoded certificates
+	var skippedBytes []string // skipped bytes
 
 	// go through all pem blocks, but take first valid pem block and drop the rest
 	pemblock := []byte(pkey)
@@ -385,6 +388,10 @@ func validatePkey(data *tlsConfigStatus, pkey string) error {
 		if decoded.Type == "PRIVATE KEY" || strings.HasSuffix(decoded.Type, " PRIVATE KEY") {
 			key = decoded
 			break
+		} else {
+			// ignore "this result of append is never used"
+			// nolint
+			skippedBytes = append(skippedBytes, decoded.Type)
 		}
 	}
 

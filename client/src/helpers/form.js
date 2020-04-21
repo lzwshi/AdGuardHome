@@ -1,7 +1,10 @@
 import React, { Fragment } from 'react';
 import { Trans } from 'react-i18next';
 import PropTypes from 'prop-types';
-import { R_IPV4, R_MAC, R_HOST, R_IPV6, R_CIDR, UNSAFE_PORTS, R_URL_REQUIRES_PROTOCOL } from '../helpers/constants';
+import {
+    R_IPV4, R_MAC, R_HOST, R_IPV6, R_CIDR, R_CIDR_IPV6,
+    UNSAFE_PORTS, R_URL_REQUIRES_PROTOCOL, R_WIN_ABSOLUTE_PATH, R_UNIX_ABSOLUTE_PATH,
+} from '../helpers/constants';
 import { createOnBlurHandler } from './helpers';
 
 export const renderField = (props, elementType) => {
@@ -191,8 +194,13 @@ export const clientId = (value) => {
         return undefined;
     }
     const formattedValue = value ? value.trim() : value;
-    if (formattedValue && !(R_IPV4.test(formattedValue) || R_IPV6.test(formattedValue)
-        || R_MAC.test(formattedValue) || R_CIDR.test(formattedValue))) {
+    if (formattedValue && !(
+        R_IPV4.test(formattedValue)
+        || R_IPV6.test(formattedValue)
+        || R_MAC.test(formattedValue)
+        || R_CIDR.test(formattedValue)
+        || R_CIDR_IPV6.test(formattedValue)
+    )) {
         return <Trans>form_error_client_id_format</Trans>;
     }
     return undefined;
@@ -280,6 +288,16 @@ export const answer = (value) => {
 export const isValidUrl = (value) => {
     if (value && !R_URL_REQUIRES_PROTOCOL.test(value)) {
         return <Trans>form_error_url_format</Trans>;
+    }
+    return undefined;
+};
+
+export const isValidAbsolutePath = value => R_WIN_ABSOLUTE_PATH.test(value)
+    || R_UNIX_ABSOLUTE_PATH.test(value);
+
+export const isValidPath = (value) => {
+    if (value && !isValidAbsolutePath(value) && !R_URL_REQUIRES_PROTOCOL.test(value)) {
+        return <Trans>form_error_url_or_path_format</Trans>;
     }
     return undefined;
 };
