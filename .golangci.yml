@@ -13,6 +13,7 @@ run:
   skip-files:
     - ".*generated.*"
     - dnsfilter/rule_to_regexp.go
+    - util/pprof.go
     - ".*_test.go"
 
 
