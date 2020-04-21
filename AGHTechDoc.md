@@ -882,7 +882,7 @@ Response:
 	200 OK
 
 	{
-		"upstream_dns": ["https...", ...],
+		"upstream_dns": ["tls://...", ...],
 		"bootstrap_dns": ["1.2.3.4", ...],
 
 		"protection_enabled": true | false,
@@ -905,7 +905,7 @@ Request:
 	POST /control/dns_config
 
 	{
-		"upstream_dns": ["https...", ...],
+		"upstream_dns": ["tls://...", ...],
 		"bootstrap_dns": ["1.2.3.4", ...],
 
 		"protection_enabled": true | false,
@@ -916,8 +916,6 @@ Request:
 		"edns_cs_enabled": true | false,
 		"dnssec_enabled": true | false
 		"disable_ipv6": true | false,
-
-		// these 2 options exclude each other (can't be set together):
 		"fastest_addr": true | false, // use Fastest Address algorithm
 		"parallel_requests": true | false, // send DNS requests to all upstream servers at once
 	}

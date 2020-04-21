@@ -372,8 +372,7 @@ func verifyCertChain(data *tlsConfigStatus, certChain string, serverName string)
 
 func validatePkey(data *tlsConfigStatus, pkey string) error {
 	// now do a more extended validation
-	var key *pem.Block        // PEM-encoded certificates
-	var skippedBytes []string // skipped bytes
+	var key *pem.Block // PEM-encoded certificates
 
 	// go through all pem blocks, but take first valid pem block and drop the rest
 	pemblock := []byte(pkey)
@@ -386,8 +385,6 @@ func validatePkey(data *tlsConfigStatus, pkey string) error {
 		if decoded.Type == "PRIVATE KEY" || strings.HasSuffix(decoded.Type, " PRIVATE KEY") {
 			key = decoded
 			break
-		} else {
-			skippedBytes = append(skippedBytes, decoded.Type)
 		}
 	}
 

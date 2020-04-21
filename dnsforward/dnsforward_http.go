@@ -85,6 +85,7 @@ func checkBlockingMode(req dnsConfigJSON) bool {
 	return true
 }
 
+// nolint(gocyclo) - we need to check each JSON field separately
 func (s *Server) handleSetConfig(w http.ResponseWriter, r *http.Request) {
 	req := dnsConfigJSON{}
 	js, err := jsonutil.DecodeObject(&req, r.Body)
