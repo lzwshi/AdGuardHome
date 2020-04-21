@@ -62,6 +62,10 @@ func CreateWeb(conf *WebConfig) *Web {
 		registerControlHandlers()
 	}
 
+	if config.DebugPProf {
+		util.PProfRegisterWebHandlers()
+	}
+
 	w.httpsServer.cond = sync.NewCond(&w.httpsServer.condLock)
 	return &w
 }

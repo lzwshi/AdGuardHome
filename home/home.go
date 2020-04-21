@@ -242,12 +242,6 @@ func run(args options) {
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		if config.DebugPProf {
-			go func() {
-				log.Println(http.ListenAndServe("localhost:6060", nil))
-			}()
-		}
 	}
 
 	err := os.MkdirAll(Context.getDataDir(), 0755)
