@@ -17,143 +17,142 @@ import {
 } from '../../../../helpers/form';
 import { BLOCKING_MODES } from '../../../../helpers/constants';
 
-const getFields = (processing, t) => Object.values(BLOCKING_MODES).map(mode => (
-    <Field
-        key={mode}
-        name="blocking_mode"
-        type="radio"
-        component={renderRadioField}
-        value={mode}
-        placeholder={t(mode)}
-        disabled={processing}
-    />
-));
+const getCheckboxes = () => [{
+    name: 'edns_cs_enabled',
+    placeholder: 'edns_enable',
+    subtitle: 'edns_cs_desc',
+},
+{
+    name: 'dnssec_enabled',
+    placeholder: 'dnssec_enable',
+    subtitle: 'dnssec_enable_desc',
+},
+{
+    name: 'disable_ipv6',
+    placeholder: 'disable_ipv6',
+    subtitle: 'disable_ipv6_desc',
+}];
+
+const customIps = [{
+    description: 'blocking_ipv4_desc',
+    name: 'blocking_ipv4',
+    validateIp: ipv4,
+},
+{
+    description: 'blocking_ipv6_desc',
+    name: 'blocking_ipv6',
+    validateIp: ipv6,
+}];
+
+const getFields = (processing, t) => Object.values(BLOCKING_MODES)
+    .map(mode => (
+        <Field
+            key={mode}
+            name="blocking_mode"
+            type="radio"
+            component={renderRadioField}
+            value={mode}
+            placeholder={t(mode)}
+            disabled={processing}
+        />
+    ));
 
 let Form = ({
     handleSubmit, submitting, invalid, processing, blockingMode, t,
-}) => (
-    <form onSubmit={handleSubmit}>
-        <div className="row">
-            <div className="col-12 col-sm-6">
-                <div className="form__group form__group--settings">
-                    <label htmlFor="ratelimit" className="form__label form__label--with-desc">
-                        <Trans>rate_limit</Trans>
-                    </label>
-                    <div className="form__desc form__desc--top">
-                        <Trans>rate_limit_desc</Trans>
-                    </div>
-                    <Field
-                        name="ratelimit"
-                        type="number"
-                        component={renderInputField}
-                        className="form-control"
-                        placeholder={t('form_enter_rate_limit')}
-                        normalize={toNumber}
-                        validate={[required, biggerOrEqualZero]}
-                    />
-                </div>
-            </div>
-            <div className="col-12">
-                <div className="form__group form__group--settings">
-                    <Field
-                        name="edns_cs_enabled"
-                        type="checkbox"
-                        component={renderSelectField}
-                        placeholder={t('edns_enable')}
-                        disabled={processing}
-                        subtitle={t('edns_cs_desc')}
-                    />
-                </div>
-            </div>
-            <div className="col-12">
-                <div className="form__group form__group--settings">
-                    <Field
-                        name="dnssec_enabled"
-                        type="checkbox"
-                        component={renderSelectField}
-                        placeholder={t('dnssec_enable')}
-                        disabled={processing}
-                        subtitle={t('dnssec_enable_desc')}
-                    />
-                </div>
-            </div>
-            <div className="col-12">
-                <div className="form__group form__group--settings">
-                    <Field
-                        name="disable_ipv6"
-                        type="checkbox"
-                        component={renderSelectField}
-                        placeholder={t('disable_ipv6')}
-                        disabled={processing}
-                        subtitle={t('disable_ipv6_desc')}
-                    />
-                </div>
-            </div>
-            <div className="col-12">
-                <div className="form__group form__group--settings mb-4">
-                    <label className="form__label form__label--with-desc">
-                        <Trans>blocking_mode</Trans>
-                    </label>
-                    <div className="form__desc form__desc--top">
-                        {Object.values(BLOCKING_MODES).map(mode => (
-                            <li key={mode}>
-                                <Trans >{`blocking_mode_${mode}`}</Trans>
-                            </li>
-                        ))}
-                    </div>
-                    <div className="custom-controls-stacked">
-                        {getFields(processing, t)}
+}) => {
+    const checkboxes = getCheckboxes();
+
+    return (
+        <form onSubmit={handleSubmit}>
+            <div className="row">
+                <div className="col-12 col-sm-6">
+                    <div className="form__group form__group--settings">
+                        <label htmlFor="ratelimit"
+                               className="form__label form__label--with-desc">
+                            <Trans>rate_limit</Trans>
+                        </label>
+                        <div className="form__desc form__desc--top">
+                            <Trans>rate_limit_desc</Trans>
+                        </div>
+                        <Field
+                            name="ratelimit"
+                            type="number"
+                            component={renderInputField}
+                            className="form-control"
+                            placeholder={t('form_enter_rate_limit')}
+                            normalize={toNumber}
+                            validate={[required, biggerOrEqualZero]}
+                        />
                     </div>
                 </div>
-            </div>
-            {blockingMode === BLOCKING_MODES.custom_ip && (
-                <Fragment>
-                    <div className="col-12 col-sm-6">
-                        <div className="form__group form__group--settings">
-                            <label htmlFor="blocking_ipv4" className="form__label form__label--with-desc">
-                                <Trans>blocking_ipv4</Trans>
-                            </label>
-                            <div className="form__desc form__desc--top">
-                                <Trans>blocking_ipv4_desc</Trans>
-                            </div>
-                            <Field
-                                name="blocking_ipv4"
-                                component={renderInputField}
-                                className="form-control"
-                                placeholder={t('form_enter_ip')}
-                                validate={[ipv4, required]}
-                            />
+                {checkboxes.map(({
+                    name, placeholder, subtitle, getTitle,
+                }) => <div className="col-12" key={name}>
+                    {typeof getTitle === 'function' && getTitle()}
+                    <div className="form__group form__group--settings">
+                        <Field
+                            name={name}
+                            type="checkbox"
+                            component={renderSelectField}
+                            placeholder={t(placeholder)}
+                            disabled={processing}
+                            subtitle={t(subtitle)}
+                        />
+                    </div>
+                </div>)}
+                <div className="col-12">
+                    <div className="form__group form__group--settings mb-4">
+                        <label className="form__label form__label--with-desc">
+                            <Trans>blocking_mode</Trans>
+                        </label>
+                        <div className="form__desc form__desc--top">
+                            {Object.values(BLOCKING_MODES)
+                                .map(mode => (
+                                    <li key={mode}>
+                                        <Trans>{`blocking_mode_${mode}`}</Trans>
+                                    </li>
+                                ))}
+                        </div>
+                        <div className="custom-controls-stacked">
+                            {getFields(processing, t)}
                         </div>
                     </div>
-                    <div className="col-12 col-sm-6">
-                        <div className="form__group form__group--settings">
-                            <label htmlFor="ip_address" className="form__label form__label--with-desc">
-                                <Trans>blocking_ipv6</Trans>
-                            </label>
-                            <div className="form__desc form__desc--top">
-                                <Trans>blocking_ipv6_desc</Trans>
+                </div>
+                {blockingMode === BLOCKING_MODES.custom_ip && (
+                    <Fragment>
+                        {customIps.map(({
+                            description,
+                            name,
+                            validateIp,
+                        }) => <div className="col-12 col-sm-6" key={name}>
+                            <div className="form__group form__group--settings">
+                                <label className="form__label form__label--with-desc"
+                                       htmlFor={name}><Trans>{name}</Trans>
+                                </label>
+                                <div className="form__desc form__desc--top">
+                                    <Trans>{description}</Trans>
+                                </div>
+                                <Field
+                                    name={name}
+                                    component={renderInputField}
+                                    className="form-control"
+                                    placeholder={t('form_enter_ip')}
+                                    validate={[validateIp, required]}
+                                />
                             </div>
-                            <Field
-                                name="blocking_ipv6"
-                                component={renderInputField}
-                                className="form-control"
-                                placeholder={t('form_enter_ip')}
-                                validate={[ipv6, required]}
-                            />
-                        </div>
-                    </div>
-                </Fragment>
-            )}
-        </div>
-        <button
-            type="submit"
-            className="btn btn-success btn-standard btn-large"
-            disabled={submitting || invalid || processing}
-        >
-            <Trans>save_btn</Trans>
-        </button>
-    </form>
-);
+                        </div>)}
+                    </Fragment>
+                )}
+            </div>
+            <button
+                type="submit"
+                className="btn btn-success btn-standard btn-large"
+                disabled={submitting || invalid || processing}
+            >
+                <Trans>save_btn</Trans>
+            </button>
+        </form>);
+};
 
 Form.propTypes = {
     blockingMode: PropTypes.string.isRequired,
